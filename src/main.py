@@ -1,8 +1,10 @@
 from langchain_openai import ChatOpenAI
-from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain.chains import create_sql_query_chain
 from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
-
+from operator import itemgetter
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnablePassthrough
 
 # Import configuration and database connection
 from config.config import OPENAI_API_KEY, OPENAI_MODEL, TEMPERATURE
@@ -43,4 +45,34 @@ chain = write_query | execute_query
 print("Executing chain...")
 result = chain.invoke({"question": example_query})
 print(f"Chain Result: {result}")
+
+print("\n=== APPROACH 3: Advanced Chain with Natural Language Answer ===")
+print("Setting up advanced chain components...")
+answer_prompt = PromptTemplate.from_template(
+    """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
+
+Question: {question}
+SQL Query: {query}
+SQL Result: {result}
+Answer: """
+)
+
+print("Creating advanced processing chain...")
+chain = (
+    RunnablePassthrough.assign(query=write_query).assign(
+        result=itemgetter("query") | execute_query
+    )
+    | answer_prompt
+    | llm
+    | StrOutputParser()
+)
+
+print("\n=== Executing Advanced Chain ===")
+print("Processing query through natural language chain...")
+result = chain.invoke({"question": example_query})
+print("\n=== Final Natural Language Response ===")
+print(result)
+
+print("\n=== Execution Complete ===")
+
 
