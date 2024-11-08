@@ -1,5 +1,8 @@
 from langchain_openai import ChatOpenAI
+from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain.chains import create_sql_query_chain
+from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
+
 
 # Import configuration and database connection
 from config.config import OPENAI_API_KEY, OPENAI_MODEL, TEMPERATURE
@@ -31,4 +34,13 @@ print(f"SQL Query: {response}")
 print("\n=== Executing SQL Query ===")
 result = db.run(response)
 print(f"Query Result: {result}")
+
+print("\n=== APPROACH 2: SQL Query Chain with Execute Query Tool ===")
+print("Initializing query tools...")
+execute_query = QuerySQLDataBaseTool(db=db)
+write_query = create_sql_query_chain(llm, db)
+chain = write_query | execute_query
+print("Executing chain...")
+result = chain.invoke({"question": example_query})
+print(f"Chain Result: {result}")
 
