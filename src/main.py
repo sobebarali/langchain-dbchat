@@ -41,7 +41,19 @@ print("\n=== Executing SQL Query ===")
 result = db.run(response)
 print(f"Query Result: {result}")
 
-print("\n=== APPROACH 2: SQL Query Chain with Execute Query Tool ===")
+
+print("\n=== APPROACH 2: SQL Query Chain with Context ===")
+context = db.get_context()
+prompt_with_context = chain.get_prompts()[0].partial(table_info=context["table_info"])
+print("\n=== Chain Prompt Template with Context ===")
+print(prompt_with_context.pretty_repr())
+
+print("\n=== Executing SQL Query with Context ===")
+result = chain.invoke({"question": example_query})
+print(f"Query Result: {result}")
+
+
+print("\n=== APPROACH 3: SQL Query Chain with Execute Query Tool ===")
 print("Initializing query tools...")
 execute_query = QuerySQLDataBaseTool(db=db)
 write_query = create_sql_query_chain(llm, db)
@@ -80,7 +92,7 @@ print(result)
 print("\n=== Execution Complete ===")
 
 
-print("\n=== APPROACH 4: ReAct Agent ===")
+print("\n=== APPROACH 5: ReAct Agent ===")
 print("Initializing SQL toolkit and creating agent...")
 toolkit = SQLDatabaseToolkit(db=db, llm=llm)
 tools = toolkit.get_tools()
