@@ -10,6 +10,10 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import FewShotPromptTemplate, PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+
 
 # Import configuration and database connection
 from config.config import OPENAI_API_KEY, OPENAI_MODEL, TEMPERATURE
@@ -42,8 +46,37 @@ print("\n=== Executing SQL Query ===")
 result = db.run(response)
 print(f"Query Result: {result}")
 
+print("\n=== APPROACH 2: SQL Query Chain with Validation ===")
+system = """Double check the user's {dialect} query for common mistakes, including:
+- Using NOT IN with NULL values
+- Using UNION when UNION ALL should have been used
+- Using BETWEEN for exclusive ranges
+- Data type mismatch in predicates
+- Properly quoting identifiers
+- Using the correct number of arguments for functions
+- Casting to the correct data type
+- Using the proper columns for joins
 
-print("\n=== APPROACH 2: SQL Query Chain with Context ===")
+If there are any of the above mistakes, rewrite the query.
+If there are no mistakes, just reproduce the original query with no further commentary.
+
+Output the final SQL query only."""
+prompt = ChatPromptTemplate.from_messages(
+    [("system", system), ("human", "{query}")]
+).partial(dialect=db.dialect)
+validation_chain = prompt | llm | StrOutputParser()
+
+full_chain = {"query": chain} | validation_chain  
+
+print("\n=== Executing SQL Query with Validation ===")
+response = full_chain.invoke({"question": example_query})
+print(f"Query Result: {response}")
+
+print("\n=== Executing SQL Query with Validation ===")
+result = db.run(response)
+print(f"Database Result: {result}")
+
+print("\n=== APPROACH 3: SQL Query Chain with Context ===")
 context = db.get_context()
 prompt_with_context = chain.get_prompts()[0].partial(table_info=context["table_info"])
 print("\n=== Chain Prompt Template with Context ===")
@@ -54,7 +87,7 @@ result = chain.invoke({"question": example_query})
 print(f"Query Result: {result}")
 
 
-print("\n=== APPROACH 3: SQL Query Chain with few shots examples ===")
+print("\n=== APPROACH 4: SQL Query Chain with few shots examples ===")
 examples = [
     {"input": "List all artists.", "query": "SELECT * FROM Artist;"},
     {
@@ -117,7 +150,7 @@ result = chain.invoke({"question": example_query})
 print(f"Query Result: {result}")
 
 
-print("\n=== APPROACH 4: SQL Query Chain with Execute Query Tool ===")
+print("\n=== APPROACH 5: SQL Query Chain with Execute Query Tool ===")
 print("Initializing query tools...")
 execute_query = QuerySQLDataBaseTool(db=db)
 write_query = create_sql_query_chain(llm, db)
@@ -126,7 +159,7 @@ print("Executing chain...")
 result = chain.invoke({"question": example_query})
 print(f"Chain Result: {result}")
 
-print("\n=== APPROACH 5: Advanced Chain with Natural Language Answer ===")
+print("\n=== APPROACH 6: Advanced Chain with Natural Language Answer ===")
 print("Setting up advanced chain components...")
 answer_prompt = PromptTemplate.from_template(
     """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
@@ -156,7 +189,7 @@ print(result)
 print("\n=== Execution Complete ===")
 
 
-print("\n=== APPROACH 6: ReAct Agent ===")
+print("\n=== APPROACH 7: ReAct Agent ===")
 print("Initializing SQL toolkit and creating agent...")
 toolkit = SQLDatabaseToolkit(db=db, llm=llm)
 tools = toolkit.get_tools()
@@ -214,3 +247,6 @@ events = agent_executor2.stream(
 for event in events:
     print("\n=== ReAct Agent 2 Response ===")
     event["messages"][-1].pretty_print()
+    
+    
+
