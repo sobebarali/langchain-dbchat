@@ -35,8 +35,8 @@ The AI-Powered SQL Query Generator is designed to simplify the process of queryi
 1. Clone the repository:
 
    ```bash
-   git clone <repository-url>
-   cd <repository-name>
+   git clone https://github.com/sobebarali/langchain-dbchat
+   cd langchain-dbchat
    ```
 
 2. Install the required Python packages:
